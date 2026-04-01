@@ -1,0 +1,25 @@
+# LinkRescue MCP Server
+
+> Broken link detection, monitoring, and fix suggestions for AI agents.
+
+## Tools
+
+- check_broken_links: Scan a URL or sitemap for broken links. Returns status codes, page locations, SEO impact, and revenue loss estimates.
+- monitor_links: Set up scheduled monitoring for a site. Returns a monitoring ID.
+- get_fix_suggestions: Given a scan report, returns prioritized remediation steps with code snippets.
+- health_check: Ping to confirm the server is alive and API is reachable.
+
+## Resources
+
+- linkrescue://example-report: Sample scan output showing the data schema.
+
+## Quick Start
+
+```
+pip install fastmcp httpx
+fastmcp run main.py --transport streamable-http --port 8000
+```
+
+## Config
+
+Set LINKRESCUE_API_BASE_URL and LINKRESCUE_API_KEY as environment variables.

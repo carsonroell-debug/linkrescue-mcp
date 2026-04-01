@@ -1,0 +1,10 @@
+{
+  "name": "LinkRescue",
+  "description": "Broken link detection, monitoring, and AI-powered fix suggestions for websites. Scans URLs or sitemaps, estimates SEO/revenue impact, and returns actionable remediation steps.",
+  "vendor": "Freedom Engineers",
+  "sourceUrl": "https://github.com/freedomengineers/linkrescue-mcp",
+  "homepage": "https://linkrescue.io",
+  "license": "MIT",
+  "runtime": "python",
+  "tags": ["seo", "broken-links", "monitoring", "affiliate", "web"]
+}

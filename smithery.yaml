@@ -1,0 +1,26 @@
+# Smithery configuration for LinkRescue MCP Server
+# https://smithery.ai/docs/config
+
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      LINKRESCUE_API_BASE_URL:
+        type: string
+        description: "Base URL of the LinkRescue API (e.g. https://linkrescue.io/api)"
+        default: "http://localhost:3000/api"
+      LINKRESCUE_API_KEY:
+        type: string
+        description: "API key for authenticated LinkRescue API requests"
+        default: ""
+    required: []
+  commandFunction: |
+    (config) => ({
+      command: "python",
+      args: ["main.py"],
+      env: {
+        LINKRESCUE_API_BASE_URL: config.LINKRESCUE_API_BASE_URL || "http://localhost:3000/api",
+        LINKRESCUE_API_KEY: config.LINKRESCUE_API_KEY || ""
+      }
+    })
