@@ -1,0 +1,37 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "linkrescue-mcp"
+version = "0.1.0"
+description = "MCP server for broken link detection, monitoring, and AI-powered fix suggestions"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+authors = [
+    { name = "Carson Roell" },
+]
+keywords = ["mcp", "broken-links", "seo", "monitoring", "affiliate", "model-context-protocol"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Internet :: WWW/HTTP :: Site Management :: Link Checking",
+]
+dependencies = [
+    "fastmcp>=3.0.0",
+    "httpx>=0.27.0",
+    "uvicorn>=0.30.0",
+]
+
+[project.urls]
+Homepage = "https://linkrescue.io"
+Repository = "https://github.com/carsonroell-debug/linkrescue-mcp"
+
+[tool.hatch.build.targets.wheel]
+packages = ["linkrescue_mcp"]
+
+[project.scripts]
+linkrescue-mcp = "linkrescue_mcp.server:mcp.run"
