@@ -1,4 +1,9 @@
+<!-- mcp-name: io.github.carsonroell-debug/linkrescue-mcp -->
+
 # LinkRescue MCP Server
+
+[![PyPI](https://img.shields.io/pypi/v/linkrescue-mcp)](https://pypi.org/project/linkrescue-mcp/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 MCP server that exposes LinkRescue's broken link scanning, monitoring, and fix suggestion capabilities to AI agents (Claude, Cursor, etc.).
 

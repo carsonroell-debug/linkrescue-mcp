@@ -1,0 +1,35 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.carsonroell-debug/linkrescue-mcp",
+  "title": "LinkRescue",
+  "description": "Broken link detection, monitoring, and AI-powered fix suggestions for websites. Scans URLs or sitemaps, estimates SEO/revenue impact, and returns actionable remediation steps.",
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "linkrescue-mcp",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ],
+  "tools": [
+    {
+      "name": "check_broken_links",
+      "description": "Scan a URL or sitemap for broken links with SEO impact and revenue loss estimates"
+    },
+    {
+      "name": "monitor_links",
+      "description": "Set up scheduled broken link monitoring for a website"
+    },
+    {
+      "name": "get_fix_suggestions",
+      "description": "Get prioritized remediation steps from a broken links scan report"
+    },
+    {
+      "name": "health_check",
+      "description": "Verify server and API connectivity"
+    }
+  ]
+}
