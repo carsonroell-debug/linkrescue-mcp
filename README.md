@@ -5,37 +5,71 @@
 [![PyPI](https://img.shields.io/pypi/v/linkrescue-mcp)](https://pypi.org/project/linkrescue-mcp/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-MCP server that exposes LinkRescue's broken link scanning, monitoring, and fix suggestion capabilities to AI agents (Claude, Cursor, etc.).
+Find broken links fast, prioritize by impact, and generate fix suggestions your AI agent can act on.
 
-Built with [FastMCP 3.x](https://github.com/jlowin/fastmcp) for the [Model Context Protocol](https://modelcontextprotocol.io/).
+LinkRescue MCP exposes broken-link scanning, monitoring, and remediation workflows through the Model Context Protocol (MCP), so tools like Claude and Cursor can run link-health operations directly.
 
-## Run Locally
+## What You Get
+
+- `check_broken_links`: scan a URL (or sitemap) and return a structured broken-link report
+- `monitor_links`: set up recurring monitoring for a website
+- `get_fix_suggestions`: generate prioritized remediation recommendations
+- `health_check`: verify MCP server and backend API connectivity
+
+If the LinkRescue backend API is unreachable, the server falls back to realistic simulated data so local testing and demos keep working.
+
+## Requirements
+
+- Python 3.11+
+- `pip`
+
+## Quick Start
 
 ```bash
-# Install deps
+git clone https://github.com/carsonroell-debug/linkrescue-mcp.git
+cd linkrescue-mcp
 pip install -r requirements.txt
-
-# Run with FastMCP (streamable HTTP for agent access)
-fastmcp run main.py --transport streamable-http --port 8000
-
-# Or run directly
 python main.py
 ```
 
-The server starts on `http://localhost:8000/mcp`.
+MCP endpoint:
 
-## Environment Variables
+- `http://localhost:8000/mcp`
+
+## Configuration
 
 | Variable | Description | Default |
 |---|---|---|
-| `LINKRESCUE_API_BASE_URL` | Your LinkRescue API base URL | `http://localhost:3000/api` |
-| `LINKRESCUE_API_KEY` | API key for authenticated requests | (empty) |
+| `LINKRESCUE_API_BASE_URL` | Base URL for LinkRescue API | `http://localhost:3000/api/v1` |
+| `LINKRESCUE_API_KEY` | API key for authenticated requests | empty |
 
-Without a running LinkRescue API backend, the server returns realistic simulated data — useful for testing and demos.
+Example:
 
-## Connect to Claude Desktop
+```bash
+export LINKRESCUE_API_BASE_URL="https://your-api.example.com/api/v1"
+export LINKRESCUE_API_KEY="your-api-key"
+python main.py
+```
 
-Add to your Claude Desktop config (`claude_desktop_config.json`):
+## Running Options
+
+Run directly:
+
+```bash
+python main.py
+```
+
+Run via FastMCP CLI:
+
+```bash
+fastmcp run main.py --transport streamable-http --port 8000
+```
+
+## Connect an MCP Client
+
+### Claude Desktop
+
+Add this to `claude_desktop_config.json`:
 
 ```json
 {
@@ -47,39 +81,68 @@ Add to your Claude Desktop config (`claude_desktop_config.json`):
 }
 ```
 
-## Connect to Claude Code
+### Claude Code
 
 ```bash
 claude mcp add linkrescue --transport http http://localhost:8000/mcp
 ```
 
-## Test with FastMCP CLI
+## Try It
 
 ```bash
-# List tools
 fastmcp list-tools main.py
-
-# Call a tool
 fastmcp call-tool main.py health_check '{}'
-fastmcp call-tool main.py check_broken_links '{"url": "https://example.com"}'
+fastmcp call-tool main.py check_broken_links '{"url":"https://example.com"}'
 ```
 
-## Deploy to Smithery
+## Tool Inputs and Outputs
 
-1. Push this repo to GitHub
-2. Go to [smithery.ai](https://smithery.ai)
-3. Click "Add Server" → paste your GitHub repo URL
-4. Smithery reads `smithery.yaml` and deploys automatically
+### `check_broken_links`
 
-One-liner after pushing to GitHub:
+Inputs:
 
-```bash
-npx @anthropic-ai/claude-code mcp add linkrescue --smithery freedomengineers/linkrescue-mcp
-```
+- `url` (required): site URL to scan
+- `sitemap_url` (optional): crawl from sitemap
+- `max_depth` (optional, default `3`): crawl depth
 
-## Deploy to Railway / Fly.io
+Returns scan metadata, broken-link details, and summary statistics.
 
-Use the included `Dockerfile`:
+### `monitor_links`
+
+Inputs:
+
+- `url` (required)
+- `frequency_hours` (optional, default `24`)
+
+Returns monitoring ID, schedule details, and status.
+
+### `get_fix_suggestions`
+
+Input:
+
+- full report from `check_broken_links`, or
+- raw `broken_links` array, or
+- JSON string of either format
+
+Returns prioritized actions and suggested remediation steps.
+
+### `health_check`
+
+No input. Returns server status and backend API reachability.
+
+## Deployment
+
+### Smithery
+
+This repo includes `smithery.yaml` and `smithery.json`.
+
+1. Push repository to GitHub
+2. Create/add server in [Smithery](https://smithery.ai/)
+3. Point Smithery to this repository
+
+### Docker / Hosting Platforms
+
+A `Dockerfile` is included for Railway, Fly.io, and other container hosts.
 
 ```bash
 # Railway
@@ -90,25 +153,21 @@ fly launch
 fly deploy
 ```
 
-Set env vars in the platform dashboard.
-
-## Tools
-
-| Tool | Description |
-|---|---|
-| `check_broken_links` | Scan a URL/sitemap for broken links with SEO impact estimates |
-| `monitor_links` | Set up scheduled broken link monitoring |
-| `get_fix_suggestions` | Get prioritized remediation steps from a scan report |
-| `health_check` | Verify server and API connectivity |
+Set `LINKRESCUE_API_BASE_URL` and `LINKRESCUE_API_KEY` in your host environment.
 
 ## Architecture
 
-```
-Agent (Claude/Cursor)
-  ↓ MCP protocol
+```text
+Agent (Claude, Cursor, etc.)
+  -> MCP
 LinkRescue MCP Server (this repo)
-  ↓ HTTP API calls
-LinkRescue API Backend (your existing app)
+  -> HTTP API
+LinkRescue Backend API
 ```
 
-The MCP server is a thin translation layer. It converts MCP tool calls into LinkRescue API requests and returns structured results agents can act on. If the backend is unreachable, it falls back to simulated data for demo purposes.
+This server is a translation layer between MCP tool calls and LinkRescue API operations.
+
+## Additional README Variants
+
+- Developer-focused version: `README.dev.md`
+- Marketplace-focused version: `README.marketplace.md`
