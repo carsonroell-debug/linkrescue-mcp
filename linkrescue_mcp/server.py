@@ -5,7 +5,7 @@ Run locally:
     fastmcp run main.py --transport streamable-http --port 8000
 
 Environment variables:
-    LINKRESCUE_API_BASE_URL  — Base URL of your LinkRescue API (default: http://localhost:3000/api)
+    LINKRESCUE_API_BASE_URL  — Base URL of your LinkRescue API (default: http://localhost:3000/api/v1)
     LINKRESCUE_API_KEY       — API key for authenticated requests
 """
 
@@ -16,6 +16,7 @@ import logging
 import os
 import time
 import uuid
+import asyncio
 from typing import Any
 
 import httpx
@@ -25,7 +26,7 @@ from fastmcp import FastMCP
 # Config
 # ---------------------------------------------------------------------------
 
-API_BASE = os.getenv("LINKRESCUE_API_BASE_URL", "http://localhost:3000/api")
+API_BASE = os.getenv("LINKRESCUE_API_BASE_URL", "http://localhost:3000/api/v1").rstrip("/")
 API_KEY = os.getenv("LINKRESCUE_API_KEY", "")
 
 log = logging.getLogger("linkrescue-mcp")
@@ -56,22 +57,33 @@ def _headers() -> dict[str, str]:
     return h
 
 
+def _app_base() -> str:
+    if API_BASE.endswith("/api/v1"):
+        return API_BASE[: -len("/api/v1")]
+    if API_BASE.endswith("/api"):
+        return API_BASE[: -len("/api")]
+    return API_BASE
+
+
 def _ts() -> str:
     from datetime import datetime, timezone
     return datetime.now(timezone.utc).isoformat()
 
 
 async def _api_post(path: str, payload: dict) -> dict:
-    """POST to the LinkRescue API. Falls back to local simulation if unreachable."""
+    """POST to the LinkRescue API. Falls back to local simulation only if unreachable."""
     url = f"{API_BASE}{path}"
     try:
         async with httpx.AsyncClient(timeout=60) as client:
             resp = await client.post(url, json=payload, headers=_headers())
             resp.raise_for_status()
             return resp.json()
-    except httpx.HTTPError as exc:
+    except httpx.RequestError as exc:
         log.warning("API call to %s failed: %s — using local simulation", url, exc)
         return {}
+    except httpx.HTTPStatusError as exc:
+        detail = exc.response.text
+        raise RuntimeError(f"LinkRescue API error {exc.response.status_code}: {detail}") from exc
 
 
 async def _api_get(path: str, params: dict | None = None) -> dict:
@@ -81,9 +93,77 @@ async def _api_get(path: str, params: dict | None = None) -> dict:
             resp = await client.get(url, params=params, headers=_headers())
             resp.raise_for_status()
             return resp.json()
-    except httpx.HTTPError as exc:
+    except httpx.RequestError as exc:
         log.warning("API call to %s failed: %s — using local simulation", url, exc)
         return {}
+    except httpx.HTTPStatusError as exc:
+        detail = exc.response.text
+        raise RuntimeError(f"LinkRescue API error {exc.response.status_code}: {detail}") from exc
+
+
+async def _wait_for_scan(scan_id: str, timeout_seconds: int = 300, poll_interval: float = 2.0) -> dict:
+    deadline = time.time() + timeout_seconds
+
+    while time.time() < deadline:
+        status = await _api_get(f"/scans/{scan_id}")
+        if not status:
+            return {}
+
+        if status.get("status") in {"completed", "failed"}:
+            return status
+
+        await asyncio.sleep(poll_interval)
+
+    raise RuntimeError(f"Timed out waiting for scan {scan_id} to complete")
+
+
+def _map_issue_priority(issue: dict[str, Any]) -> str:
+    if issue.get("is_affiliate"):
+        return "high"
+
+    issue_type = issue.get("issue_type")
+    if issue_type in {"BROKEN_4XX", "SERVER_5XX", "LOST_PARAMS"}:
+        return "medium"
+    return "low"
+
+
+def _normalize_scan_report(report: dict[str, Any]) -> dict[str, Any]:
+    issues = report.get("issues", [])
+    broken_links = [
+        {
+            "url": issue.get("url"),
+            "status_code": issue.get("status_code"),
+            "final_url": issue.get("final_url"),
+            "redirect_hops": issue.get("redirect_hops"),
+            "issue_type": issue.get("issue_type"),
+            "link_type": "affiliate" if issue.get("is_affiliate") else "external",
+            "is_affiliate": issue.get("is_affiliate", False),
+            "seo_impact": _map_issue_priority(issue),
+        }
+        for issue in issues
+    ]
+    summary = report.get("summary", {})
+    by_type = summary.get("by_type")
+    if not by_type:
+        by_type = {}
+        for issue in issues:
+            issue_type = issue.get("issue_type", "UNKNOWN")
+            by_type[issue_type] = by_type.get(issue_type, 0) + 1
+
+    return {
+        "scan_id": report.get("scan_id"),
+        "url": report.get("domain"),
+        "timestamp": report.get("completed_at") or report.get("started_at") or _ts(),
+        "pages_scanned": report.get("pages_scanned", 0),
+        "total_links_checked": report.get("links_checked", 0),
+        "broken_links": broken_links,
+        "summary": {
+            "total_broken": report.get("issue_count", len(broken_links)),
+            "by_type": by_type,
+            "health_score": summary.get("health_score"),
+        },
+        "raw_scan_status": report,
+    }
 
 # ---------------------------------------------------------------------------
 # Simulation helpers (used when no backend API is reachable)
@@ -218,7 +298,7 @@ async def check_broken_links(
     Returns:
         JSON report with scan_id, broken_links list, and summary statistics.
     """
-    payload = {"url": url, "max_depth": max_depth}
+    payload = {"url": url}
     if sitemap_url:
         payload["sitemap_url"] = sitemap_url
 
@@ -227,6 +307,18 @@ async def check_broken_links(
     if not result:
         log.info("Using simulated scan for %s", url)
         result = _simulate_scan(url, max_depth)
+    else:
+        scan_id = result.get("scan_id")
+        if not scan_id:
+            raise RuntimeError("LinkRescue API did not return a scan_id")
+        completed = await _wait_for_scan(scan_id)
+        if not completed:
+            log.info("Using simulated scan for %s", url)
+            result = _simulate_scan(url, max_depth)
+        elif completed.get("status") == "failed":
+            return completed
+        else:
+            result = _normalize_scan_report(completed)
 
     return result
 
@@ -303,8 +395,14 @@ async def get_fix_suggestions(
     if not broken:
         return {"suggestions": [], "message": "No broken links to fix — site looks healthy!"}
 
+    payload: dict[str, Any]
+    if isinstance(broken_links_report, dict) and broken_links_report.get("scan_id"):
+        payload = {"scan_id": broken_links_report["scan_id"]}
+    else:
+        payload = {"broken_links": broken}
+
     # Try API first
-    result = await _api_post("/suggestions", {"broken_links": broken})
+    result = await _api_post("/suggestions", payload)
 
     if not result:
         suggestions = _simulate_suggestions(broken)
@@ -327,7 +425,7 @@ async def health_check() -> dict:
     api_ok = False
     try:
         async with httpx.AsyncClient(timeout=5) as client:
-            resp = await client.get(f"{API_BASE}/health", headers=_headers())
+            resp = await client.get(f"{_app_base()}/api/health", headers=_headers())
             api_ok = resp.status_code == 200
     except httpx.HTTPError:
         pass

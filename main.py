@@ -5,7 +5,7 @@ Run locally:
     fastmcp run main.py --transport streamable-http --port 8000
 
 Environment variables:
-    LINKRESCUE_API_BASE_URL  — Base URL of your LinkRescue API (default: http://localhost:3000/api)
+    LINKRESCUE_API_BASE_URL  — Base URL of your LinkRescue API (default: http://localhost:3000/api/v1)
     LINKRESCUE_API_KEY       — API key for authenticated requests
 """
 
