@@ -15,4 +15,4 @@ from linkrescue_mcp.server import mcp  # noqa: F401
 if __name__ == "__main__":
     import os
     port = int(os.environ.get("PORT", 8000))
-    mcp.run(transport="streamable-http", port=port, stateless_http=True)
+    mcp.run(transport="streamable-http", host="0.0.0.0", port=port, stateless_http=True)
