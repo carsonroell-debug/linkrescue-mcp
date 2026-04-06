@@ -6,3 +6,6 @@ venv/
 dist/
 *.egg-info/
 .mypy_cache/
+.mcpregistry_github_token
+.mcpregistry_registry_token
+.mcpize/
