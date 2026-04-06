@@ -13,4 +13,6 @@ Environment variables:
 from linkrescue_mcp.server import mcp  # noqa: F401
 
 if __name__ == "__main__":
-    mcp.run(transport="streamable-http", port=8000, stateless_http=True)
+    import os
+    port = int(os.environ.get("PORT", 8000))
+    mcp.run(transport="streamable-http", port=port, stateless_http=True)
