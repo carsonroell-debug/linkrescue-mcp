@@ -1,0 +1,11 @@
+name: linkrescue-mcp
+description: Broken link detection MCP server with affiliate link awareness, revenue loss estimation, and AI-powered fix suggestions. The only MCP that tells you which broken links are costing you money.
+runtime: container
+dockerfile: Dockerfile
+transport: stdio
+bridge:
+  mode: stdio
+credentials:
+  - name: LINKRESCUE_API_URL
+    description: LinkRescue API endpoint (optional, for deep scans)
+    required: false
