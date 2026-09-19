@@ -1,5 +1,5 @@
 name: linkrescue-mcp
-description: Broken link detection MCP server with affiliate link awareness, revenue loss estimation, and AI-powered fix suggestions. The only MCP that tells you which broken links are costing you money.
+description: Broken link detection MCP server with affiliate link awareness and AI-powered fix suggestions. Catches the silent failure other checkers miss: links that return HTTP 200 but have dropped their affiliate tracking parameters.
 runtime: container
 dockerfile: Dockerfile
 transport: streamable-http

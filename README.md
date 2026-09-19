@@ -8,7 +8,7 @@
 
 Find broken affiliate links fast, prioritize by impact, and generate fix suggestions your AI agent can act on.
 
-**One call. 38+ affiliate networks checked. Revenue loss estimated.**
+**One call. 38+ affiliate networks checked. Silent tracking failures caught.**
 
 > **One-click install:** [Install on MCPize](https://mcpize.com/mcp/linkrescue-mcp?ref=YHCCR&utm_source=github&utm_medium=readme) | `pip install linkrescue-mcp`
 
@@ -21,7 +21,7 @@ LinkRescue MCP exposes broken-link scanning, monitoring, and remediation workflo
 - `get_fix_suggestions`: generate prioritized remediation recommendations
 - `health_check`: verify MCP server and backend API connectivity
 
-If the LinkRescue backend API is unreachable, the server falls back to realistic simulated data so local testing and demos keep working.
+If the LinkRescue backend API is unreachable, tools raise an error naming the endpoint they could not reach. They never return invented findings. For local testing, set `LINKRESCUE_DEMO_MODE=1` to get sample data — every simulated payload carries `"simulated": true` and an explicit warning.
 
 ## Quick Start
 
@@ -41,7 +41,7 @@ Then ask your AI agent:
 
 ## Free vs Pro
 
-| Tool | Free | Pro ($19/mo) | Agency ($29/mo) |
+| Tool | Free | Pro | Agency |
 |------|------|--------------|-----------------|
 | `health_check` | Yes | Yes | Yes |
 | `check_broken_links` (up to 50 pages) | Yes | Yes | Yes |
@@ -50,12 +50,11 @@ Then ask your AI agent:
 | `get_fix_suggestions` | - | Yes | Yes |
 | `monitor_links` (daily) | - | Yes | Yes |
 | `monitor_links` (hourly + webhooks) | - | - | Yes |
-| Revenue loss estimates | - | Yes | Yes |
 | Multi-site monitoring | - | 5 sites | 25 sites |
 
 Free tier gives you single-page broken-link checks. Pro unlocks the full crawler + fix suggestions + recurring monitoring. Agency adds hourly checks, webhooks, and unlimited site count.
 
-**[Upgrade to Pro on MCPize](https://mcpize.com/mcp/linkrescue-mcp?ref=YHCCR&utm_source=github&utm_medium=readme)** — $19/mo or $190/yr. Agency $29/mo or $290/yr.
+Current pricing lives at **[linkrescue.io/pricing](https://www.linkrescue.io/pricing)** — that page is the single source of truth. [Install on MCPize](https://mcpize.com/mcp/linkrescue-mcp?ref=YHCCR&utm_source=github&utm_medium=readme).
 
 ## Install
 
@@ -87,8 +86,9 @@ MCP endpoint:
 
 | Variable | Description | Default |
 |---|---|---|
-| `LINKRESCUE_API_BASE_URL` | Base URL for LinkRescue API | `http://localhost:3000/api/v1` |
+| `LINKRESCUE_API_BASE_URL` | Base URL for LinkRescue API | `https://www.linkrescue.io/api/v1` |
 | `LINKRESCUE_API_KEY` | API key for authenticated requests | empty |
+| `LINKRESCUE_DEMO_MODE` | Return labelled sample data instead of erroring when the API is unreachable. Off by default — never enable against a real site. | empty (off) |
 
 Example:
 
@@ -160,7 +160,7 @@ Inputs:
 - `sitemap_url` (optional, Agency tier): crawl from sitemap
 - `max_depth` (optional, default `3`): crawl depth
 
-Returns scan metadata, broken-link details, and summary statistics. Pro and Agency tiers include estimated monthly revenue loss for broken affiliate links.
+Returns scan metadata, broken-link details, and summary statistics. Affiliate links that resolve but have lost their tracking parameters are reported as exposure — a count of links that earn nothing when clicked. LinkRescue does not estimate lost revenue; multiply by your own RPM.
 
 ### `monitor_links`
 

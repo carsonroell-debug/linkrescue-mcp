@@ -26,8 +26,16 @@ from fastmcp import FastMCP
 # Config
 # ---------------------------------------------------------------------------
 
-API_BASE = os.getenv("LINKRESCUE_API_BASE_URL", "http://localhost:3000/api/v1").rstrip("/")
+API_BASE = os.getenv("LINKRESCUE_API_BASE_URL", "https://www.linkrescue.io/api/v1").rstrip("/")
 API_KEY = os.getenv("LINKRESCUE_API_KEY", "")
+
+# Simulation is OPT-IN. Without this flag an unreachable backend is an error,
+# never invented findings about a real site.
+DEMO_MODE = os.getenv("LINKRESCUE_DEMO_MODE", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+class BackendUnavailableError(RuntimeError):
+    """The LinkRescue API could not be reached and demo mode is off."""
 
 log = logging.getLogger("linkrescue-mcp")
 logging.basicConfig(level=logging.INFO)
@@ -79,8 +87,18 @@ async def _api_post(path: str, payload: dict) -> dict:
             resp.raise_for_status()
             return resp.json()
     except httpx.RequestError as exc:
-        log.warning("API call to %s failed: %s — using local simulation", url, exc)
-        return {}
+        if DEMO_MODE:
+            log.warning(
+                "API call to %s failed: %s — LINKRESCUE_DEMO_MODE is on, returning SIMULATED data",
+                url, exc,
+            )
+            return {}
+        raise BackendUnavailableError(
+            f"Could not reach the LinkRescue API at {url}: {exc}. "
+            "Returning no result rather than a guessed one. Set LINKRESCUE_API_KEY "
+            "(and LINKRESCUE_API_BASE_URL if self-hosting), or set LINKRESCUE_DEMO_MODE=1 "
+            "to get clearly-labelled sample data for local testing."
+        ) from exc
     except httpx.HTTPStatusError as exc:
         detail = exc.response.text
         raise RuntimeError(f"LinkRescue API error {exc.response.status_code}: {detail}") from exc
@@ -94,8 +112,18 @@ async def _api_get(path: str, params: dict | None = None) -> dict:
             resp.raise_for_status()
             return resp.json()
     except httpx.RequestError as exc:
-        log.warning("API call to %s failed: %s — using local simulation", url, exc)
-        return {}
+        if DEMO_MODE:
+            log.warning(
+                "API call to %s failed: %s — LINKRESCUE_DEMO_MODE is on, returning SIMULATED data",
+                url, exc,
+            )
+            return {}
+        raise BackendUnavailableError(
+            f"Could not reach the LinkRescue API at {url}: {exc}. "
+            "Returning no result rather than a guessed one. Set LINKRESCUE_API_KEY "
+            "(and LINKRESCUE_API_BASE_URL if self-hosting), or set LINKRESCUE_DEMO_MODE=1 "
+            "to get clearly-labelled sample data for local testing."
+        ) from exc
     except httpx.HTTPStatusError as exc:
         detail = exc.response.text
         raise RuntimeError(f"LinkRescue API error {exc.response.status_code}: {detail}") from exc
@@ -170,8 +198,14 @@ def _normalize_scan_report(report: dict[str, Any]) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 def _simulate_scan(url: str, max_depth: int) -> dict:
-    """Return a realistic simulated scan result for demo/testing purposes."""
+    """Return a clearly-labelled SAMPLE scan result. Never returned unless DEMO_MODE is on."""
     return {
+        "simulated": True,
+        "warning": (
+            "SIMULATED SAMPLE DATA — these findings are fabricated and describe no real "
+            "site. Returned because LINKRESCUE_DEMO_MODE is enabled. Do not report these "
+            "as scan results."
+        ),
         "scan_id": str(uuid.uuid4()),
         "url": url,
         "timestamp": _ts(),
@@ -187,7 +221,6 @@ def _simulate_scan(url: str, max_depth: int) -> dict:
                 "link_type": "affiliate",
                 "seo_impact": "high",
                 "estimated_monthly_clicks": 320,
-                "estimated_revenue_loss_usd": 48.00,
             },
             {
                 "url": "https://expired-partner.example.com/deal",
@@ -197,7 +230,6 @@ def _simulate_scan(url: str, max_depth: int) -> dict:
                 "link_type": "external",
                 "seo_impact": "medium",
                 "estimated_monthly_clicks": 85,
-                "estimated_revenue_loss_usd": 0,
             },
             {
                 "url": f"{url.rstrip('/')}/wp-content/uploads/guide.pdf",
@@ -207,13 +239,12 @@ def _simulate_scan(url: str, max_depth: int) -> dict:
                 "link_type": "internal",
                 "seo_impact": "low",
                 "estimated_monthly_clicks": 40,
-                "estimated_revenue_loss_usd": 0,
             },
         ],
         "summary": {
             "total_broken": 3,
             "by_type": {"affiliate": 1, "external": 1, "internal": 1},
-            "total_estimated_revenue_loss_usd": 48.00,
+            "affiliate_links_earning_nothing": 1,
             "health_score": 87,
         },
     }
@@ -286,7 +317,7 @@ async def check_broken_links(
 
     Returns a structured report with every broken link found, its HTTP status code,
     the page it was discovered on, link type (affiliate/external/internal),
-    SEO impact rating, and estimated revenue loss.
+    SEO impact rating, and affiliate tracking status.
 
     Agents can pass the output directly to get_fix_suggestions for remediation steps.
 
@@ -407,6 +438,11 @@ async def get_fix_suggestions(
     if not result:
         suggestions = _simulate_suggestions(broken)
         result = {
+            "simulated": True,
+            "warning": (
+                "SIMULATED SAMPLE DATA — returned because LINKRESCUE_DEMO_MODE is enabled. "
+                "Do not present these as real remediation advice."
+            ),
             "suggestions": suggestions,
             "total": len(suggestions),
             "high_priority": sum(1 for s in suggestions if s.get("priority") == "high"),
