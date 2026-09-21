@@ -48,5 +48,19 @@
       "name": "health_check",
       "description": "Verify server and API connectivity"
     }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://www.linkrescue.io/api/mcp",
+      "headers": [
+        {
+          "name": "Authorization",
+          "description": "Bearer lr_... API key \u2014 free at https://www.linkrescue.io/signup",
+          "isRequired": true,
+          "isSecret": true
+        }
+      ]
+    }
   ]
 }

@@ -23,6 +23,26 @@ LinkRescue MCP exposes broken-link scanning, monitoring, and remediation workflo
 
 If the LinkRescue backend API is unreachable, tools raise an error naming the endpoint they could not reach. They never return invented findings. For local testing, set `LINKRESCUE_DEMO_MODE=1` to get sample data — every simulated payload carries `"simulated": true` and an explicit warning.
 
+## Hosted endpoint (no install)
+
+LinkRescue runs a remote MCP server at **`https://www.linkrescue.io/api/mcp`** (streamable HTTP).
+Get a free API key at [linkrescue.io/signup](https://www.linkrescue.io/signup), then point any
+remote-capable MCP client at it:
+
+```json
+{
+  "mcpServers": {
+    "linkrescue": {
+      "url": "https://www.linkrescue.io/api/mcp",
+      "headers": { "Authorization": "Bearer lr_your_api_key" }
+    }
+  }
+}
+```
+
+The hosted server exposes `check_links`, `start_site_scan`, `get_scan` and `get_fix_suggestions`.
+It never returns simulated data. The stdio package below is for local and offline use.
+
 ## Quick Start
 
 ```json
